@@ -13,7 +13,7 @@ RUN wget -q "https://download.eclipse.org/mat/latest/rcp/MemoryAnalyzer-linux.gt
 
 WORKDIR /analyzer
 COPY requirements.txt .
-RUN pip3 install -r requirements.txt --break-system-packages
+RUN pip3 install --upgrade pip && pip3 install -r requirements.txt --break-system-packages
 
 COPY . .
 
