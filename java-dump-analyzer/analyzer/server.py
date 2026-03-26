@@ -1,10 +1,11 @@
 """
 HTTP server que expõe o analyzer para o worker chamar via rede interna.
-POST /analyze  {"type": "heap|thread", "file": "/tmp/..."}
+POST /analyze  {"type": "heap|thread|nps", "file": "/tmp/..."}
 """
 
 import sys
 import os
+from pathlib import Path
 
 sys.path.insert(0, "/analyzer")
 
@@ -12,6 +13,7 @@ from flask import Flask, jsonify, request
 
 from parsers.heap_parser import parse_heap_dump
 from parsers.thread_parser import parse_thread_dump
+from parsers.nps_parser import parse_nps
 
 app = Flask(__name__)
 
@@ -33,12 +35,18 @@ def analyze():
     if not os.path.exists(file_path):
         return jsonify({"erro": f"Arquivo não encontrado: {file_path}"}), 404
 
+    # Auto-detecta .nps mesmo que o tipo informado seja 'thread'
+    if dump_type == "thread" and Path(file_path).suffix.lower() == ".nps":
+        dump_type = "nps"
+
     if dump_type == "heap":
         result = parse_heap_dump(file_path)
+    elif dump_type == "nps":
+        result = parse_nps(file_path)
     elif dump_type == "thread":
         result = parse_thread_dump(file_path)
     else:
-        return jsonify({"erro": f"Tipo inválido: {dump_type}. Use 'heap' ou 'thread'"}), 400
+        return jsonify({"erro": f"Tipo inválido: {dump_type}. Use 'heap', 'thread' ou 'nps'"}), 400
 
     return jsonify(result)
 

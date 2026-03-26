@@ -12,13 +12,14 @@ from ..tasks.thread_task import analyze_thread
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".hprof", ".txt"}
-HEAP_MIME_TYPES = {"application/octet-stream"}
+ALLOWED_EXTENSIONS = {".hprof", ".txt", ".nps"}
+HEAP_EXTENSIONS = {".hprof"}
+THREAD_EXTENSIONS = {".txt", ".nps"}
 
 
 def detect_type(filename: str, content_type: str) -> str:
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    if ext == ".hprof":
+    if ext in HEAP_EXTENSIONS:
         return "heap"
     return "thread"
 
@@ -29,7 +30,10 @@ async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
     if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Use .hprof or .txt")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de arquivo não suportado: {ext}. Use .hprof, .txt ou .nps",
+        )
 
     job_id = str(uuid.uuid4())
     dump_type = detect_type(filename, file.content_type or "")
