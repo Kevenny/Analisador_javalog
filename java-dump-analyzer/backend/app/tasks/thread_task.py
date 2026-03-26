@@ -22,7 +22,9 @@ def analyze_thread(self, analysis_id: int, minio_key: str):
         analysis.status = "processing"
         db.commit()
 
-        tmp_path = f"/tmp/dumps/{uuid.uuid4()}.txt"
+        # Preserva a extensão original para que o analyzer detecte o formato (.txt, .nps, etc.)
+        original_ext = ("." + minio_key.rsplit(".", 1)[-1].lower()) if "." in minio_key else ".txt"
+        tmp_path = f"/tmp/dumps/{uuid.uuid4()}{original_ext}"
         os.makedirs("/tmp/dumps", exist_ok=True)
         storage_service.download_file(minio_key, tmp_path)
 
