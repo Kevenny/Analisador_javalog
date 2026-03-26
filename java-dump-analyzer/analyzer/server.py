@@ -28,17 +28,17 @@ def analyze():
     file_path = data.get("file")
 
     if not dump_type or not file_path:
-        return jsonify({"error": "Campos 'type' e 'file' são obrigatórios"}), 400
+        return jsonify({"erro": "Os campos 'type' e 'file' são obrigatórios"}), 400
 
     if not os.path.exists(file_path):
-        return jsonify({"error": f"Arquivo não encontrado: {file_path}"}), 404
+        return jsonify({"erro": f"Arquivo não encontrado: {file_path}"}), 404
 
     if dump_type == "heap":
         result = parse_heap_dump(file_path)
     elif dump_type == "thread":
         result = parse_thread_dump(file_path)
     else:
-        return jsonify({"error": f"Tipo inválido: {dump_type}"}), 400
+        return jsonify({"erro": f"Tipo inválido: {dump_type}. Use 'heap' ou 'thread'"}), 400
 
     return jsonify(result)
 
