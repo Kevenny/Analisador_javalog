@@ -4,10 +4,10 @@ interface Props {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  queued: "Queued — waiting for a worker...",
-  processing: "Processing — analyzing your dump...",
-  done: "Analysis complete",
-  error: "Analysis failed",
+  queued: "Na fila — aguardando worker...",
+  processing: "Processando — analisando o dump...",
+  done: "Análise concluída",
+  error: "Falha na análise",
 };
 
 export default function AnalysisStatus({ status, filename }: Props) {
