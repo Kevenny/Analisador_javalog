@@ -7,6 +7,7 @@ networks:
 volumes:
   postgres_data:
   minio_data:
+  analyzer_tmp:
 
 services:
   postgres:
@@ -80,14 +81,20 @@ services:
       context: ./backend
     command: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2
     env_file: .env
+    environment:
+      ANALYZER_URL: http://analyzer:5000
     networks:
       - dump-net
+    volumes:
+      - analyzer_tmp:/tmp/dumps
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
       minio:
+        condition: service_healthy
+      analyzer:
         condition: service_healthy
 
   analyzer:
@@ -96,7 +103,12 @@ services:
     networks:
       - dump-net
     volumes:
-      - /tmp/analyzer:/tmp
+      - analyzer_tmp:/tmp/dumps
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:

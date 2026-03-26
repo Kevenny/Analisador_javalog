@@ -17,4 +17,5 @@ RUN pip3 install --upgrade pip && pip3 install -r requirements.txt --break-syste
 
 COPY . .
 
-ENTRYPOINT ["python3", "run_analysis.py"]
+EXPOSE 5000
+CMD ["python3", "server.py"]

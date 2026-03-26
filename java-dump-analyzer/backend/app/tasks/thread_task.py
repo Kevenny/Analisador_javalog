@@ -1,10 +1,14 @@
 import os
 import uuid
 
+import httpx
+
 from ..database import SessionLocal
 from ..models import Analysis
 from ..services.storage import storage_service
 from .celery_app import celery
+
+ANALYZER_URL = os.environ.get("ANALYZER_URL", "http://analyzer:5000")
 
 
 @celery.task(bind=True, name="tasks.analyze_thread")
@@ -18,20 +22,18 @@ def analyze_thread(self, analysis_id: int, minio_key: str):
         analysis.status = "processing"
         db.commit()
 
-        tmp_path = f"/tmp/{uuid.uuid4()}.txt"
+        tmp_path = f"/tmp/dumps/{uuid.uuid4()}.txt"
+        os.makedirs("/tmp/dumps", exist_ok=True)
         storage_service.download_file(minio_key, tmp_path)
 
         try:
-            import subprocess, json
-            result = subprocess.run(
-                ["python3", "/analyzer/run_analysis.py", "--type", "thread", "--file", tmp_path],
-                capture_output=True,
-                text=True,
+            response = httpx.post(
+                f"{ANALYZER_URL}/analyze",
+                json={"type": "thread", "file": tmp_path},
                 timeout=300,
             )
-            if result.returncode != 0:
-                raise RuntimeError(result.stderr)
-            result_data = json.loads(result.stdout)
+            response.raise_for_status()
+            result_data = response.json()
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
