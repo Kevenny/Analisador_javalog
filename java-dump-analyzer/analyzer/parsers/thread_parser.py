@@ -1,5 +1,5 @@
 """
-Parser for jstack / Java thread dumps.
+Parser para thread dumps Java (jstack).
 """
 
 import hashlib
@@ -73,7 +73,7 @@ def parse_thread_dump(path: str) -> Dict[str, Any]:
         if m and line.startswith('"'):
             thread_name = m.group("name")
             priority = int(m.group("prio") or 5)
-            state = "UNKNOWN"
+            state = "DESCONHECIDO"
             stack_frames: List[str] = []
             waiting_on: Optional[str] = None
             locked: List[str] = []
@@ -110,9 +110,9 @@ def parse_thread_dump(path: str) -> Dict[str, Any]:
         else:
             i += 1
 
-    # State counts
+    # Contagem de estados
     state_counts: Dict[str, int] = Counter(
-        t["state"] for t in threads if t["state"] != "UNKNOWN"
+        t["state"] for t in threads if t["state"] != "DESCONHECIDO"
     )
     normalized_states = {
         "RUNNABLE": 0,
@@ -127,14 +127,14 @@ def parse_thread_dump(path: str) -> Dict[str, Any]:
         else:
             normalized_states[key] = count
 
-    # Hotspots: most frequent stack frames
+    # Pontos quentes: frames mais frequentes nas stacks
     frame_counter: Counter = Counter()
     for t in threads:
         for frame in t["stack_trace"]:
             frame_counter[frame] += 1
     hotspots = [{"frame": frame, "count": cnt} for frame, cnt in frame_counter.most_common(20)]
 
-    # Stack groups: group threads by similar stack
+    # Grupos de stack: agrupa threads com stacks similares
     groups: Dict[str, Dict[str, Any]] = {}
     for t in threads:
         if not t["stack_trace"]:
