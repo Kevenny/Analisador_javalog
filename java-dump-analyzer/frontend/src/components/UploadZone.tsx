@@ -46,7 +46,7 @@ export default function UploadZone() {
         <input {...getInputProps()} />
         <div className="text-4xl mb-4">📂</div>
         {isDragActive ? (
-          <p className="text-blue-600 font-medium">Drop the file here...</p>
+          <p className="text-blue-600 font-medium">Solte o arquivo aqui...</p>
         ) : (
           <>
             <p className="text-gray-600 font-medium">
@@ -60,7 +60,7 @@ export default function UploadZone() {
       {isLoading && (
         <div className="mt-4">
           <div className="flex justify-between text-sm text-gray-600 mb-1">
-            <span>Uploading...</span>
+            <span>Enviando...</span>
             <span>{progress}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">

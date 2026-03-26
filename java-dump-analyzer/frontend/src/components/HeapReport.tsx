@@ -34,15 +34,15 @@ export default function HeapReport({ result }: { result: HeapResult }) {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Heap Size</p>
+          <p className="text-sm text-gray-500">Tamanho do Heap</p>
           <p className="text-2xl font-bold text-blue-700">{fmt(summary.heap_size_bytes)}</p>
         </div>
         <div className="bg-white rounded-xl border p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Total Objects</p>
+          <p className="text-sm text-gray-500">Total de Objetos</p>
           <p className="text-2xl font-bold text-blue-700">{summary.total_objects.toLocaleString()}</p>
         </div>
         <div className="bg-white rounded-xl border p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Analysis Date</p>
+          <p className="text-sm text-gray-500">Data da Análise</p>
           <p className="text-lg font-semibold text-gray-700">{new Date(summary.analysis_date).toLocaleString()}</p>
         </div>
       </div>
@@ -56,12 +56,12 @@ export default function HeapReport({ result }: { result: HeapResult }) {
       {/* Leak Suspects */}
       {leak_suspects.length > 0 && (
         <div className="bg-white rounded-xl border shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Leak Suspects</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Suspeitos de Vazamento</h2>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b">
-                <th className="pb-2">Description</th>
-                <th className="pb-2 text-right">Retained</th>
+                <th className="pb-2">Descrição</th>
+                <th className="pb-2 text-right">Retido</th>
                 <th className="pb-2 text-right w-32">%</th>
               </tr>
             </thead>
@@ -88,15 +88,15 @@ export default function HeapReport({ result }: { result: HeapResult }) {
       {/* Top Consumers */}
       {top_consumers.length > 0 && (
         <div className="bg-white rounded-xl border shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Top Consumers</h2>
-          <div className="flex flex-col lg:flex-row gap-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Maiores Consumidores</h2>
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
             <div className="flex-1 overflow-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500 border-b">
-                    <th className="pb-2">Class</th>
-                    <th className="pb-2 text-right">Instances</th>
-                    <th className="pb-2 text-right">Retained</th>
+                    <th className="pb-2">Classe</th>
+                    <th className="pb-2 text-right">Instâncias</th>
+                    <th className="pb-2 text-right">Retido</th>
                     <th className="pb-2 text-right">%</th>
                   </tr>
                 </thead>
@@ -113,16 +113,29 @@ export default function HeapReport({ result }: { result: HeapResult }) {
               </table>
             </div>
             {pieData.length > 0 && (
-              <div className="w-full lg:w-64 h-64">
+              <div className="w-full lg:w-72 flex-shrink-0" style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" outerRadius={90}>
+                  <PieChart margin={{ top: 5, right: 5, bottom: 40, left: 5 }}>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="42%"
+                      outerRadius={85}
+                    >
                       {pieData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => fmt(v)} />
-                    <Legend />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={40}
+                      formatter={(value) =>
+                        value.length > 20 ? value.slice(0, 18) + "…" : value
+                      }
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -134,12 +147,12 @@ export default function HeapReport({ result }: { result: HeapResult }) {
       {/* Dominator Tree */}
       {dominator_tree.length > 0 && (
         <div className="bg-white rounded-xl border shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Dominator Tree</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Árvore de Dominadores</h2>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b">
-                <th className="pb-2">Object</th>
-                <th className="pb-2 text-right">Retained</th>
+                <th className="pb-2">Objeto</th>
+                <th className="pb-2 text-right">Retido</th>
                 <th className="pb-2 text-right">%</th>
               </tr>
             </thead>
