@@ -1,5 +1,6 @@
-import { useParams, Link } from "react-router-dom";
-import { useAnalysis } from "../api/client";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "react-query";
+import { useAnalysis, useDeleteAnalysis, useCancelAnalysis } from "../api/client";
 import AnalysisStatus from "../components/AnalysisStatus";
 import HeapReport from "../components/HeapReport";
 import ThreadReport from "../components/ThreadReport";
@@ -8,7 +9,11 @@ import ProfileReport from "../components/ProfileReport";
 export default function Analysis() {
   const { id } = useParams<{ id: string }>();
   const analysisId = id ? parseInt(id, 10) : null;
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data, isLoading, isError } = useAnalysis(analysisId, true);
+  const { mutateAsync: deleteAnalysis, isLoading: isDeleting } = useDeleteAnalysis();
+  const { mutateAsync: cancelAnalysis, isLoading: isCancelling } = useCancelAnalysis();
 
   if (isLoading) {
     return (
@@ -31,14 +36,49 @@ export default function Analysis() {
 
   const isPending = data.status === "queued" || data.status === "processing";
 
+  async function handleDelete() {
+    if (!analysisId) return;
+    if (!confirm("Excluir esta análise?")) return;
+    await deleteAnalysis(analysisId);
+    queryClient.invalidateQueries(["analyses"]);
+    navigate("/");
+  }
+
+  async function handleCancel() {
+    if (!analysisId) return;
+    await cancelAnalysis(analysisId);
+    queryClient.invalidateQueries(["analysis", analysisId]);
+    queryClient.invalidateQueries(["analyses"]);
+  }
+
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
-        <Link to="/" className="text-blue-600 hover:underline text-sm">
-          ← Home
-        </Link>
-        <span className="text-gray-300">/</span>
-        <span className="text-gray-700 text-sm font-medium">{data.filename}</span>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Link to="/" className="text-blue-600 hover:underline text-sm">
+            ← Início
+          </Link>
+          <span className="text-gray-300">/</span>
+          <span className="text-gray-700 text-sm font-medium">{data.filename}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {isPending && (
+            <button
+              onClick={handleCancel}
+              disabled={isCancelling}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-yellow-300 text-yellow-700 hover:bg-yellow-50 disabled:opacity-50 transition-colors"
+            >
+              ⏹ {isCancelling ? "Cancelando..." : "Cancelar"}
+            </button>
+          )}
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+          >
+            🗑 {isDeleting ? "Excluindo..." : "Excluir"}
+          </button>
+        </div>
       </div>
 
       {isPending && <AnalysisStatus status={data.status} filename={data.filename} />}

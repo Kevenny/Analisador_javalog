@@ -40,6 +40,12 @@ class StorageService:
             response.close()
             response.release_conn()
 
+    def delete_file(self, key: str):
+        try:
+            self.client.remove_object(self.bucket, key)
+        except S3Error:
+            pass  # ignora se o objeto já não existir
+
     def get_url(self, key: str) -> str:
         return self.client.presigned_get_object(self.bucket, key)
 

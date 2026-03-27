@@ -71,3 +71,17 @@ export function useHistory(page = 1) {
     return data;
   });
 }
+
+export function useDeleteAnalysis() {
+  return useMutation(async (id: number) => {
+    await api.delete(`/analysis/${id}`);
+    return id;
+  });
+}
+
+export function useCancelAnalysis() {
+  return useMutation(async (id: number): Promise<AnalysisDetail> => {
+    const { data } = await api.post<AnalysisDetail>(`/analysis/${id}/cancel`);
+    return data;
+  });
+}
