@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .database import Base, engine
-from .routers import analysis, upload, ws
+from .routers import analysis, directory, upload, ws
 from .services.storage import storage_service
 
 
@@ -35,6 +35,7 @@ app.add_middleware(
 
 app.include_router(upload.router, prefix="/api")
 app.include_router(analysis.router, prefix="/api")
+app.include_router(directory.router, prefix="/api")
 app.include_router(ws.router, prefix="/api")
 
 

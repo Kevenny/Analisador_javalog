@@ -72,6 +72,29 @@ export function useHistory(page = 1) {
   });
 }
 
+export interface FileEntry {
+  name: string;
+  relative_path: string;
+  absolute_path: string;
+  size_bytes: number;
+  type: string;
+  ext: string;
+}
+
+export function useScanDir() {
+  return useQuery<FileEntry[]>(["dir-list"], async () => {
+    const { data } = await api.get<FileEntry[]>("/dir/list");
+    return data;
+  }, { refetchInterval: 30000 });
+}
+
+export function useAnalyzeLocalFile() {
+  return useMutation(async (absolute_path: string): Promise<UploadResponse> => {
+    const { data } = await api.post<UploadResponse>("/dir/analyze", { absolute_path });
+    return data;
+  });
+}
+
 export function useDeleteAnalysis() {
   return useMutation(async (id: number) => {
     await api.delete(`/analysis/${id}`);

@@ -1,0 +1,4 @@
+# Ignora todos os arquivos de dump, mantém o diretório no git
+*
+!.gitignore
+!.gitkeep
