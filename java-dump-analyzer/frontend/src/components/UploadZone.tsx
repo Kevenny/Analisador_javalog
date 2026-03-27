@@ -28,8 +28,8 @@ export default function UploadZone() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      "application/octet-stream": [".hprof", ".nps"],
-      "text/plain": [".txt", ".nps"],
+      "application/octet-stream": [".hprof", ".nps", ".tdump"],
+      "text/plain": [".tdump"],
     },
     multiple: false,
     disabled: isLoading,
@@ -50,7 +50,7 @@ export default function UploadZone() {
         ) : (
           <>
             <p className="text-gray-600 font-medium">
-              Arraste um heap dump (.hprof) ou thread dump (.txt, .nps) aqui
+              Arraste um arquivo aqui: heap dump (.hprof), thread dump (.tdump) ou profile (.nps)
             </p>
             <p className="text-gray-400 text-sm mt-1">ou clique para selecionar</p>
           </>

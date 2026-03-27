@@ -39,7 +39,7 @@ export default function ThreadReport({ result }: { result: ThreadResult }) {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border p-5 shadow-sm col-span-2 sm:col-span-1">
-          <p className="text-sm text-gray-500">Total Threads</p>
+          <p className="text-sm text-gray-500">Total de Threads</p>
           <p className="text-3xl font-bold text-blue-700">{summary.total_threads}</p>
         </div>
         {stateEntries.map(([state, count]) => (
@@ -55,11 +55,11 @@ export default function ThreadReport({ result }: { result: ThreadResult }) {
         <div className="bg-red-50 border-2 border-red-400 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-2xl">🔴</span>
-            <h2 className="text-lg font-bold text-red-700">Deadlock Detected!</h2>
+            <h2 className="text-lg font-bold text-red-700">Deadlock Detectado!</h2>
           </div>
           {deadlocks.map((dl, i) => (
             <div key={i} className="mb-4">
-              <p className="font-medium text-red-800 mb-1">Involved threads: {dl.threads.join(", ")}</p>
+              <p className="font-medium text-red-800 mb-1">Threads envolvidas: {dl.threads.join(", ")}</p>
               <pre className="text-xs text-red-700 bg-red-100 rounded p-3 overflow-auto whitespace-pre-wrap">
                 {dl.description}
               </pre>
@@ -71,12 +71,12 @@ export default function ThreadReport({ result }: { result: ThreadResult }) {
       {/* Hotspots */}
       {hotspots.length > 0 && (
         <div className="bg-white rounded-xl border shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Hotspot Frames</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Frames Mais Frequentes</h2>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b">
                 <th className="pb-2">Frame</th>
-                <th className="pb-2 text-right w-24">Occurrences</th>
+                <th className="pb-2 text-right w-24">Ocorrências</th>
               </tr>
             </thead>
             <tbody>
@@ -98,7 +98,7 @@ export default function ThreadReport({ result }: { result: ThreadResult }) {
       {/* Stack Groups */}
       {stack_groups.length > 0 && (
         <div className="bg-white rounded-xl border shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Thread Groups (by stack similarity)</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Grupos de Threads (por similaridade de stack)</h2>
           <div className="space-y-3">
             {stack_groups.slice(0, 20).map((g) => (
               <div key={g.stack_hash} className="border rounded-lg overflow-hidden">
@@ -108,7 +108,7 @@ export default function ThreadReport({ result }: { result: ThreadResult }) {
                 >
                   <div>
                     <span className="font-medium text-gray-700">{g.count} thread{g.count > 1 ? "s" : ""}</span>
-                    <span className="ml-3 text-gray-500 text-sm">sample: {g.sample_thread}</span>
+                    <span className="ml-3 text-gray-500 text-sm">exemplo: {g.sample_thread}</span>
                   </div>
                   <span className="text-gray-400">{expandedGroup === g.stack_hash ? "▲" : "▼"}</span>
                 </button>
@@ -125,7 +125,7 @@ export default function ThreadReport({ result }: { result: ThreadResult }) {
 
       {/* Thread list */}
       <div className="bg-white rounded-xl border shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">All Threads ({threads.length})</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Todas as Threads ({threads.length})</h2>
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {threads.map((t, i) => (
             <div key={i} className="border rounded-lg px-4 py-3">
@@ -135,7 +135,7 @@ export default function ThreadReport({ result }: { result: ThreadResult }) {
                 </span>
                 <span className="font-medium text-gray-700 text-sm">{t.name}</span>
                 {t.waiting_on && (
-                  <span className="text-xs text-orange-600">waiting on {t.waiting_on}</span>
+                  <span className="text-xs text-orange-600">aguardando: {t.waiting_on}</span>
                 )}
               </div>
               {t.stack_trace.length > 0 && (
