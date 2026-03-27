@@ -17,6 +17,7 @@ class Settings(BaseSettings):
 
     secret_key: str = "changeme-secret-key"
     max_upload_size_mb: int = 4096
+    input_dumps_dir: str = "/data/dumps"
 
     @property
     def database_url(self) -> str:

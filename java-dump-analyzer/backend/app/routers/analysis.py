@@ -33,7 +33,8 @@ def delete_analysis(analysis_id: int, db: Session = Depends(get_db)):
     analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
-    storage_service.delete_file(analysis.minio_key)
+    if not analysis.minio_key.startswith("local://"):
+        storage_service.delete_file(analysis.minio_key)
     db.delete(analysis)
     db.commit()
 

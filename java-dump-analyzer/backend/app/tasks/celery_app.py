@@ -6,7 +6,12 @@ celery = Celery(
     "dump_analyzer",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.heap_task", "app.tasks.thread_task", "app.tasks.profile_task"],
+    include=[
+        "app.tasks.heap_task",
+        "app.tasks.thread_task",
+        "app.tasks.profile_task",
+        "app.tasks.direct_task",
+    ],
 )
 
 celery.conf.update(

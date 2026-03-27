@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "react-query";
 import { useHistory, useDeleteAnalysis, useCancelAnalysis } from "../api/client";
 import UploadZone from "../components/UploadZone";
+import DirectoryScanner from "../components/DirectoryScanner";
 
 const TYPE_LABELS: Record<string, string> = {
   heap: "Heap Dump",
@@ -51,6 +52,11 @@ export default function Home() {
           Envie um heap dump (.hprof), thread dump (.tdump) ou profile (.nps) para análise.
         </p>
         <UploadZone />
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-gray-800 mb-3">Analisar do Diretório</h2>
+        <DirectoryScanner />
       </div>
 
       {history && history.length > 0 && (

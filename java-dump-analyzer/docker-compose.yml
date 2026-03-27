@@ -61,6 +61,8 @@ services:
     env_file: .env
     ports:
       - "8000:8000"
+    volumes:
+      - ./input_dumps:/data/dumps:ro
     networks:
       - dump-net
     depends_on:
@@ -87,6 +89,7 @@ services:
       - dump-net
     volumes:
       - analyzer_tmp:/tmp/dumps
+      - ./input_dumps:/data/dumps:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,6 +107,7 @@ services:
       - dump-net
     volumes:
       - analyzer_tmp:/tmp/dumps
+      - ./input_dumps:/data/dumps:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 10s
