@@ -9,18 +9,22 @@ from ..schemas import UploadResponse
 from ..services.storage import storage_service
 from ..tasks.heap_task import analyze_heap
 from ..tasks.thread_task import analyze_thread
+from ..tasks.profile_task import analyze_profile
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".hprof", ".txt", ".nps"}
+ALLOWED_EXTENSIONS = {".hprof", ".tdump", ".nps"}
 HEAP_EXTENSIONS = {".hprof"}
-THREAD_EXTENSIONS = {".txt", ".nps"}
+THREAD_EXTENSIONS = {".tdump"}
+PROFILE_EXTENSIONS = {".nps"}
 
 
 def detect_type(filename: str, content_type: str) -> str:
     ext = "." + filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext in HEAP_EXTENSIONS:
         return "heap"
+    if ext in PROFILE_EXTENSIONS:
+        return "profile"
     return "thread"
 
 
@@ -32,7 +36,7 @@ async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail=f"Tipo de arquivo não suportado: {ext}. Use .hprof, .txt ou .nps",
+            detail=f"Tipo de arquivo não suportado: {ext}. Use .hprof (heap dump), .tdump (thread dump) ou .nps (profile)",
         )
 
     job_id = str(uuid.uuid4())
@@ -62,6 +66,8 @@ async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
 
     if dump_type == "heap":
         analyze_heap.delay(analysis.id, minio_key)
+    elif dump_type == "profile":
+        analyze_profile.delay(analysis.id, minio_key)
     else:
         analyze_thread.delay(analysis.id, minio_key)
 

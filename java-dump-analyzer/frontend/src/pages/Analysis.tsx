@@ -3,6 +3,7 @@ import { useAnalysis } from "../api/client";
 import AnalysisStatus from "../components/AnalysisStatus";
 import HeapReport from "../components/HeapReport";
 import ThreadReport from "../components/ThreadReport";
+import ProfileReport from "../components/ProfileReport";
 
 export default function Analysis() {
   const { id } = useParams<{ id: string }>();
@@ -12,7 +13,7 @@ export default function Analysis() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <p className="text-gray-400">Loading...</p>
+        <p className="text-gray-400">Carregando...</p>
       </div>
     );
   }
@@ -20,9 +21,9 @@ export default function Analysis() {
   if (isError || !data) {
     return (
       <div className="text-center py-20">
-        <p className="text-red-500 mb-4">Failed to load analysis.</p>
+        <p className="text-red-500 mb-4">Falha ao carregar análise.</p>
         <Link to="/" className="text-blue-600 hover:underline">
-          Back to home
+          Voltar ao início
         </Link>
       </div>
     );
@@ -57,12 +58,14 @@ export default function Analysis() {
         <div>
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-gray-900">{data.filename}</h1>
-            <span className="capitalize bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-700">
-              {data.type} dump
+            <span className="bg-gray-100 px-3 py-1 rounded-full text-sm font-medium text-gray-700">
+              {data.type === "heap" ? "Heap Dump" : data.type === "profile" ? "Profile (.nps)" : "Thread Dump"}
             </span>
           </div>
           {data.type === "heap" ? (
             <HeapReport result={data.result} />
+          ) : data.type === "profile" ? (
+            <ProfileReport result={data.result} />
           ) : (
             <ThreadReport result={data.result} />
           )}

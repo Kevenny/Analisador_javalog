@@ -1,6 +1,9 @@
 """
 HTTP server que expõe o analyzer para o worker chamar via rede interna.
-POST /analyze  {"type": "heap|thread|nps", "file": "/tmp/..."}
+POST /analyze  {"type": "heap|thread|profile", "file": "/tmp/..."}
+  - heap    → arquivo .hprof
+  - thread  → arquivo .tdump (jstack)
+  - profile → arquivo .nps (NetBeans Profiler Snapshot)
 """
 
 import struct
@@ -36,18 +39,21 @@ def analyze():
     if not os.path.exists(file_path):
         return jsonify({"erro": f"Arquivo não encontrado: {file_path}"}), 404
 
-    # Auto-detecta .nps mesmo que o tipo informado seja 'thread'
-    if dump_type == "thread" and Path(file_path).suffix.lower() == ".nps":
-        dump_type = "nps"
+    # Normaliza tipos legados e auto-detecta pela extensão
+    ext = Path(file_path).suffix.lower()
+    if ext == ".nps":
+        dump_type = "profile"
+    elif ext == ".tdump":
+        dump_type = "thread"
 
     if dump_type == "heap":
         result = parse_heap_dump(file_path)
-    elif dump_type == "nps":
+    elif dump_type == "profile":
         result = parse_nps(file_path)
     elif dump_type == "thread":
         result = parse_thread_dump(file_path)
     else:
-        return jsonify({"erro": f"Tipo inválido: {dump_type}. Use 'heap', 'thread' ou 'nps'"}), 400
+        return jsonify({"erro": f"Tipo inválido: {dump_type}. Use 'heap', 'thread' ou 'profile'"}), 400
 
     return jsonify(result)
 
