@@ -1,5 +1,11 @@
 import { Cell, Pie, PieChart, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
+interface Insight {
+  nivel: "info" | "aviso" | "critico";
+  titulo: string;
+  descricao: string;
+}
+
 interface HeapResult {
   summary: {
     heap_size_bytes: number;
@@ -10,9 +16,20 @@ interface HeapResult {
   leak_suspects: Array<{ description: string; retained_bytes: number; percentage: number }>;
   top_consumers: Array<{ class_name: string; instances: number; retained_bytes: number; percentage: number }>;
   dominator_tree: Array<{ object: string; retained_bytes: number; percentage: number }>;
+  package_breakdown?: Array<{ package: string; instance_count: number; retained_bytes: number; percent: number }>;
+  insights?: Insight[];
 }
 
-const COLORS = ["#3b82f6", "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#06b6d4"];
+const COLORS = ["#3b82f6","#6366f1","#8b5cf6","#ec4899","#f43f5e","#f97316","#eab308","#22c55e","#14b8a6","#06b6d4"];
+
+const NIVEL_STYLE: Record<string, string> = {
+  info:    "bg-blue-50 border-blue-200 text-blue-800",
+  aviso:   "bg-yellow-50 border-yellow-300 text-yellow-800",
+  critico: "bg-red-50 border-red-400 text-red-800",
+};
+const NIVEL_ICON: Record<string, string> = {
+  info: "ℹ️", aviso: "⚠️", critico: "🔴",
+};
 
 function fmt(bytes: number) {
   if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(2)} GB`;
@@ -21,16 +38,41 @@ function fmt(bytes: number) {
   return `${bytes} B`;
 }
 
-export default function HeapReport({ result }: { result: HeapResult }) {
-  const { summary, leak_suspects, top_consumers, dominator_tree } = result;
+function InsightsList({ insights }: { insights: Insight[] }) {
+  if (!insights?.length) return null;
+  return (
+    <div className="space-y-3">
+      {insights.map((ins, i) => (
+        <div key={i} className={`flex gap-3 border rounded-xl p-4 ${NIVEL_STYLE[ins.nivel] ?? NIVEL_STYLE.info}`}>
+          <span className="text-lg flex-shrink-0">{NIVEL_ICON[ins.nivel]}</span>
+          <div>
+            <p className="font-semibold text-sm">{ins.titulo}</p>
+            <p className="text-sm mt-0.5 opacity-90">{ins.descricao}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const pieData = top_consumers.map((c) => ({
+export default function HeapReport({ result }: { result: HeapResult }) {
+  const { summary, leak_suspects, top_consumers, dominator_tree, package_breakdown, insights } = result;
+
+  const pieData = top_consumers.slice(0, 10).map((c) => ({
     name: c.class_name.split(".").pop() || c.class_name,
     value: c.retained_bytes,
   }));
 
   return (
     <div className="space-y-8">
+      {/* Insights */}
+      {insights && insights.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">Contexto e Insights</h2>
+          <InsightsList insights={insights} />
+        </div>
+      )}
+
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border p-5 shadow-sm">
@@ -43,13 +85,35 @@ export default function HeapReport({ result }: { result: HeapResult }) {
         </div>
         <div className="bg-white rounded-xl border p-5 shadow-sm">
           <p className="text-sm text-gray-500">Data da Análise</p>
-          <p className="text-lg font-semibold text-gray-700">{new Date(summary.analysis_date).toLocaleString()}</p>
+          <p className="text-lg font-semibold text-gray-700">{new Date(summary.analysis_date).toLocaleString("pt-BR")}</p>
         </div>
       </div>
 
       {summary.note && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800 text-sm">
           {summary.note}
+        </div>
+      )}
+
+      {/* Package Breakdown */}
+      {package_breakdown && package_breakdown.length > 0 && (
+        <div className="bg-white rounded-xl border shadow-sm p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-1">Consumo por Pacote</h2>
+          <p className="text-xs text-gray-400 mb-4">Memória retida agrupada por pacote Java.</p>
+          <div className="space-y-2">
+            {package_breakdown.map((pkg, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <span className="font-mono text-xs text-gray-600 w-48 truncate flex-shrink-0" title={pkg.package}>
+                  {pkg.package}
+                </span>
+                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pkg.percent}%` }} />
+                </div>
+                <span className="text-xs text-gray-500 w-16 text-right">{fmt(pkg.retained_bytes)}</span>
+                <span className="text-xs font-medium text-blue-700 w-10 text-right">{pkg.percent.toFixed(1)}%</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -116,25 +180,14 @@ export default function HeapReport({ result }: { result: HeapResult }) {
               <div className="w-full lg:w-72 flex-shrink-0" style={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart margin={{ top: 5, right: 5, bottom: 40, left: 5 }}>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="42%"
-                      outerRadius={85}
-                    >
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="42%" outerRadius={85}>
                       {pieData.map((_, i) => (
                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip formatter={(v: number) => fmt(v)} />
-                    <Legend
-                      verticalAlign="bottom"
-                      height={40}
-                      formatter={(value) =>
-                        value.length > 20 ? value.slice(0, 18) + "…" : value
-                      }
+                    <Legend verticalAlign="bottom" height={40}
+                      formatter={(value) => value.length > 20 ? value.slice(0, 18) + "…" : value}
                     />
                   </PieChart>
                 </ResponsiveContainer>

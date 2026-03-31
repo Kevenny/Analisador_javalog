@@ -136,6 +136,8 @@ def _parse_netbeans_nps(path: str) -> Dict[str, Any]:
             'O arquivo pode ser de um tipo de snapshot não suportado (ex: memory snapshot).'
         )
 
+    duration_ms = max(0, time_end - time_start)
+
     # Converte timestamps epoch ms para ISO string
     def ms_to_iso(ms: int) -> str:
         try:
@@ -168,9 +170,22 @@ def _parse_netbeans_nps(path: str) -> Dict[str, Any]:
     frame_counter: Counter = Counter()
     for frames in threads_data.values():
         frame_counter.update(frames)
+    total_frame_hits = sum(frame_counter.values()) or 1
     hotspots = [
-        {'frame': frame, 'count': cnt}
+        {'frame': frame, 'count': cnt, 'percent': round(cnt / total_frame_hits * 100, 1)}
         for frame, cnt in frame_counter.most_common(30)
+    ]
+
+    # Agrupamento por pacote
+    pkg_counter: Counter = Counter()
+    for frame in frame_counter:
+        parts = frame.split('.')
+        pkg = '.'.join(parts[:2]) if len(parts) >= 3 else parts[0]
+        pkg_counter[pkg] += frame_counter[frame]
+    total_pkg_hits = sum(pkg_counter.values()) or 1
+    package_breakdown = [
+        {'package': pkg, 'frame_count': cnt, 'percent': round(cnt / total_pkg_hits * 100, 1)}
+        for pkg, cnt in pkg_counter.most_common(15)
     ]
 
     # Contagem de estados
@@ -181,6 +196,65 @@ def _parse_netbeans_nps(path: str) -> Dict[str, Any]:
 
     total = len(threads_out)
     total_frames = sum(len(t['stack_trace']) for t in threads_out)
+
+    # Insights
+    insights: List[Dict[str, Any]] = []
+
+    if package_breakdown:
+        top_pkg = package_breakdown[0]
+        insights.append({
+            'nivel': 'info',
+            'titulo': f'Hotspot principal: {top_pkg["package"]}',
+            'descricao': (
+                f'{top_pkg["percent"]:.1f}% dos frames de CPU pertencem ao pacote '
+                f'"{top_pkg["package"]}". Este é o ponto mais quente da aplicação durante o profiling.'
+            ),
+        })
+
+    jdk_pkgs = {'java', 'javax', 'sun', 'jdk', 'com.sun'}
+    jdk_hits = sum(cnt for pkg, cnt in pkg_counter.items()
+                   if pkg.split('.')[0] in jdk_pkgs)
+    jdk_pct = jdk_hits / total_pkg_hits * 100
+    if jdk_pct > 30:
+        insights.append({
+            'nivel': 'aviso',
+            'titulo': f'{jdk_pct:.1f}% dos frames são de internos JDK',
+            'descricao': (
+                'Alta proporção de frames em classes JDK internas (java.*, sun.*, jdk.*). '
+                'Isso pode indicar pressão de GC, operações de I/O bloqueantes ou overhead de reflection.'
+            ),
+        })
+
+    if total == 1:
+        insights.append({
+            'nivel': 'info',
+            'titulo': 'Profiling de thread única',
+            'descricao': (
+                'O snapshot contém dados de apenas 1 thread. '
+                'Para análise completa da aplicação, capture um CPU snapshot com todas as threads ativas.'
+            ),
+        })
+
+    if duration_ms > 0:
+        dur_s = duration_ms / 1000
+        insights.append({
+            'nivel': 'info',
+            'titulo': f'Duração da captura: {dur_s:.1f}s',
+            'descricao': (
+                f'O profiling ocorreu em {analysis_date} com duração de {dur_s:.1f} segundo(s). '
+                f'{total_frames} frames únicos observados em {total} thread(s).'
+            ),
+        })
+    else:
+        note_text = (
+            f'Snapshot de CPU do NetBeans Profiler — {total} thread(s) capturada(s), '
+            f'{total_frames} frames únicos no call tree. Capturado em: {analysis_date}.'
+        )
+        insights.append({
+            'nivel': 'info',
+            'titulo': 'Snapshot de CPU',
+            'descricao': note_text,
+        })
 
     note = (
         f'Snapshot de CPU do NetBeans Profiler — {total} thread(s) capturada(s), '
@@ -196,7 +270,11 @@ def _parse_netbeans_nps(path: str) -> Dict[str, Any]:
             'states': state_counts,
             'deadlocks_found': False,
             'note': note,
+            'capture_duration_ms': duration_ms,
+            'snapshot_type': snap_type,
         },
+        'package_breakdown': package_breakdown,
+        'insights': insights,
         'deadlocks': [],
         'threads': threads_out,
         'hotspots': hotspots,

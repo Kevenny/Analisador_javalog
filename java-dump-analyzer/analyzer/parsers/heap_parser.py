@@ -9,7 +9,7 @@ import os
 import struct
 from collections import defaultdict
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # ── Tags de registro de alto nível ──────────────────────────────────────────
 TAG_STRING           = 0x01
@@ -295,6 +295,100 @@ def parse_heap_dump(hprof_path: str) -> dict:
     )
 
 
+def _pkg_key(class_name: str, depth: int = 2) -> str:
+    """Retorna os primeiros `depth` segmentos do pacote de um nome de classe."""
+    parts = class_name.split('.')
+    if len(parts) <= depth:
+        return class_name
+    return '.'.join(parts[:depth])
+
+
+def _build_package_breakdown(top_consumers: list, heap_bytes: int) -> list:
+    """Agrupa os top_consumers por pacote e calcula totais."""
+    pkg_bytes: Dict[str, int] = defaultdict(int)
+    pkg_instances: Dict[str, int] = defaultdict(int)
+    for entry in top_consumers:
+        pkg = _pkg_key(entry['class_name'])
+        pkg_bytes[pkg] += entry['retained_bytes']
+        pkg_instances[pkg] += entry['instances']
+    result = []
+    for pkg, retained in sorted(pkg_bytes.items(), key=lambda x: -x[1]):
+        pct = round(retained / heap_bytes * 100, 2) if heap_bytes else 0
+        result.append({
+            'package': pkg,
+            'instance_count': pkg_instances[pkg],
+            'retained_bytes': retained,
+            'percent': pct,
+        })
+    return result[:15]
+
+
+def _fmt_bytes(b: int) -> str:
+    if b < 1024:
+        return f'{b} B'
+    if b < 1024 ** 2:
+        return f'{b/1024:.1f} KB'
+    if b < 1024 ** 3:
+        return f'{b/1024**2:.1f} MB'
+    return f'{b/1024**3:.2f} GB'
+
+
+def _build_insights_heap(
+    top_consumers: list,
+    leak_suspects: list,
+    heap_bytes: int,
+    total_objects: int,
+) -> list:
+    insights = []
+    if not top_consumers:
+        return insights
+
+    top = top_consumers[0]
+    insights.append({
+        'nivel': 'info',
+        'titulo': f'Maior consumidor: {top["class_name"]}',
+        'descricao': (
+            f'A classe {top["class_name"]} retém {_fmt_bytes(top["retained_bytes"])} '
+            f'({top["percentage"]:.1f}% do heap) em {top["instances"]:,} instâncias.'
+        ),
+    })
+
+    # Arrays de byte/char dominam?
+    arr_names = {'byte[]', 'char[]', 'byte', 'char'}
+    arr_bytes = sum(e['retained_bytes'] for e in top_consumers if e['class_name'] in arr_names)
+    if heap_bytes and arr_bytes / heap_bytes > 0.25:
+        insights.append({
+            'nivel': 'aviso',
+            'titulo': 'Arrays de bytes/chars dominam o heap',
+            'descricao': (
+                f'{_fmt_bytes(arr_bytes)} ({arr_bytes/heap_bytes*100:.1f}%) são arrays de bytes/chars. '
+                'Isso pode indicar alto consumo de Strings, buffers de I/O ou dados em cache.'
+            ),
+        })
+
+    # Muitos suspeitos de vazamento
+    if len(leak_suspects) >= 5:
+        insights.append({
+            'nivel': 'aviso',
+            'titulo': f'{len(leak_suspects)} classes com grande concentração de instâncias',
+            'descricao': (
+                'Diversas classes têm número elevado de instâncias, o que pode indicar '
+                'vazamentos de memória ou acúmulo indevido de objetos.'
+            ),
+        })
+
+    # Heap total
+    insights.append({
+        'nivel': 'info',
+        'titulo': f'Heap analisado: {_fmt_bytes(heap_bytes)}',
+        'descricao': (
+            f'Total de {total_objects:,} objetos mapeados, ocupando {_fmt_bytes(heap_bytes)} de heap retido.'
+        ),
+    })
+
+    return insights
+
+
 def _build_result(
     file_size: int,
     instance_counts: dict,
@@ -352,6 +446,9 @@ def _build_result(
         for entry in top_consumers[:10]
     ]
 
+    package_breakdown = _build_package_breakdown(top_consumers, heap_bytes)
+    insights = _build_insights_heap(top_consumers, leak_suspects, heap_bytes, total_objects)
+
     summary: dict = {
         'heap_size_bytes': heap_bytes,
         'total_objects': total_objects,
@@ -365,4 +462,6 @@ def _build_result(
         'leak_suspects': leak_suspects,
         'top_consumers': top_consumers,
         'dominator_tree': dominator_tree,
+        'package_breakdown': package_breakdown,
+        'insights': insights,
     }
